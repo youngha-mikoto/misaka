@@ -135,7 +135,7 @@ Once the configuration is complete, build the bootloader.
     $ build
 
 - If you encounter the error “ModuleNotFoundError: No module named ‘distutils.util’”, running `sudo apt install python3-distutils` and then running `build` again may resolve the issue. Please try this.
-- If the build fails with the error “Instance of library class [RegisterFilterLib] is not found,” see [MikanLoaderPkg cannot be built due to [RegisterFilterLib]-related errors](https://github.com/uchan-nos/os-from-zero/blob/main/faq.md#registerfilterlib-%E9%96%A2%E4%BF%82%E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC% E3%81%A7-mikanloaderpkg-%E3%81%8C%E3%83%93%E3%83%AB%E3%83%89%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%9B%E3%82%93).
+- If the build fails with the error “Instance of library class [RegisterFilterLib] is not found,” see [MikanLoaderPkg cannot be built due to [RegisterFilterLib]-related errors](https://github.com/uchan-nos/os-from-zero/blob/main/faq.md#registerfilterlib-%E9%96%A2%E4%BF%82%E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%A7-mikanloaderpkg-%E3%81%8C%E3%83%93%E3%83%AB%E3%83%89%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%9B%E3%82%93).
 
 If the Loader.efi file is generated, the build was successful.
 
