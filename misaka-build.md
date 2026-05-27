@@ -1,161 +1,161 @@
 # mikanos-build
 
-このリポジトリは uchan が開発している教育用 OS [MikanOS](https://github.com/uchan-nos/mikanos) をビルドする手順およびツールを収録しています。
-Ubuntu 18.04 で動作を確認しています。
+This repository contains the procedures and tools for building [MikanOS](https://github.com/uchan-nos/mikanos), an educational OS developed by uchan.
+Compatibility has been verified on Ubuntu 18.04.
 
-ここで紹介する手順は Linux のコマンド操作にある程度慣れていることを前提に書かれています。
-Linux のコマンドに不慣れな方は、まず [これだけは知っておきたい Linux コマンド](https://github.com/uchan-nos/os-from-zero/wiki/Basic-Linux-Commands) を読むことをお勧めします。
+The instructions provided here assume you are somewhat familiar with Linux command-line operations.
+If you are unfamiliar with Linux commands, we recommend reading [Essential Linux Commands You Should Know](https://github.com/uchan-nos/os-from-zero/wiki/Basic-Linux-Commands) first.
 
-MikanOS のビルド手順は大きく次の 4 段階です。
+The MikanOS build process consists of the following four main steps:
 
-1. ビルド環境の構築
-2. MikanOS のソースコードの入手
-3. ブートローダーのビルド
-4. MikanOS のビルド
+1. Setting up the build environment
+2. Obtaining the MikanOS source code
+3. Building the bootloader
+4. Building MikanOS
 
-## ビルド環境の構築
+## Setting up the build environment
 
-ブートローダーおよび MikanOS 本体のビルドに必要なツールやファイルを揃えます。
+Gather the tools and files necessary for building the bootloader and MikanOS itself.
 
-### リポジトリのダウンロード
+### Downloading the repository
 
-まずは Git をインストールして，mikanos-build リポジトリをダウンロードします。
+First, install Git and download the mikanos-build repository.
 
     $ sudo apt update
     $ sudo apt install git
     $ cd $HOME
     $ git clone https://github.com/uchan-nos/mikanos-build.git osbook
 
-mikanos-build 最新版は Ubuntu 22.04 をサポートしています。ただし、導入される lld-14 を使うとリンクアドレスがズレることにより OS やアプリが誤動作することが分かっています。
+The latest version of mikanos-build supports Ubuntu 22.04. However, it has been found that using the included lld-14 causes link addresses to shift, resulting in the OS or applications malfunctioning.
 
-- [day03a以降、カーネルの起動まで進まない · Issue #134](https://github.com/uchan-nos/os-from-zero/issues/134)
-- [tviewをLLVM 10でビルドするとページフォルトが発生する · Issue #4](https://github.com/uchan-nos/mikanos/issues/4)
+- [Day 03a and later: Fails to reach kernel boot · Issue #134](https://github.com/uchan-nos/os-from-zero/issues/134)
+- [Page faults occur when building tview with LLVM 10 · Issue #4](https://github.com/uchan-nos/mikanos/issues/4)
 
-lld-7 を使いたい場合は Ubuntu 18.04 か 20.04 をお使いください。Ubuntu 18.04 や 20.04 向けには次のコマンドを実行して古い mikanos-build を利用してください。
+If you wish to use lld-7, please use Ubuntu 18.04 or 20.04. For Ubuntu 18.04 and 20.04, please run the following command to use the older mikanos-build.
 
     $ cd osbook
     $ git checkout 8d4882122ec548ef680b6b5a2ae841a0fd4d07a1
 
-### 開発ツールの導入
+### Installing Development Tools
 
-次に Clang，Nasm といった開発ツールや，EDK IIのセットアップを行います。
-`ansible_provision.yml` に必要なツールが記載されています。
-Ansible を使ってセットアップを行うと楽です。
+Next, we will set up development tools such as Clang and Nasm, as well as EDK II.
+The required tools are listed in `ansible_provision.yml`.
+It is easier to perform the setup using Ansible.
 
-注意）ansible_provision.yml は LLVM7 をデフォルトに設定します。これは Ubuntu の alternatives という仕組みを使い、/usr/bin 以下にリンクを張ることで実現しています。
+Note: `ansible_provision.yml` sets LLVM7 as the default. This is achieved by using Ubuntu’s `alternatives` mechanism to create a symbolic link in `/usr/bin`.
 
     $ sudo apt install ansible
     $ cd $HOME/osbook/devenv
     $ ansible-playbook -K -i ansible_inventory ansible_provision.yml
 
-セットアップが上手くいけば `iasl` というコマンドがインストールされ，`$HOME/edk2` というディレクトリが生成されているはずです。
-これらがなければセットアップが失敗しています。
+If the setup is successful, the `iasl` command should be installed, and a directory named `$HOME/edk2` should have been created.
+If these are missing, the setup has failed.
 
     $ iasl -v
     $ ls $HOME/edk2
 
-WSL 上の Ubuntu で上記のコマンドを実行すると，`$HOME/.profile` に `DISPLAY` 環境変数の設定が追加されることがあります。
-この設定を有効にするにはターミナルを再起動するか，次のコマンドを実行する必要があります。
+When you run the above commands on Ubuntu in WSL, a setting for the `DISPLAY` environment variable may be added to `$HOME/.profile`.
+To enable this setting, you need to restart the terminal or run the following command.
 
     $ source $HOME/.profile
 
-### 標準ライブラリのライセンスについて
+### About Standard Library Licenses
 
-加えて，上記の `ansible-playbook` コマンドはビルド済みの標準ライブラリを `$HOME/osbook/devenv/x86_64-elf` にダウンロードします。
+Additionally, the `ansible-playbook` command mentioned above downloads pre-built standard libraries to `$HOME/osbook/devenv/x86_64-elf`.
 
-このディレクトリに含まれるファイルは [Newlib](https://sourceware.org/newlib/)，[libc++](https://libcxx.llvm.org/)，[FreeType](https://www.freetype.org/) をビルドしたものです。
-それらのライセンスはそれぞれのライブラリ固有のライセンスに従います。
-MikanOS や mikanos-build リポジトリ全体のライセンスとは異なりますので注意してください。
+The files in this directory are builds of [Newlib](https://sourceware.org/newlib/), [libc++](https://libcxx.llvm.org/), and [FreeType](https://www.freetype.org/).
+Their licenses are governed by the respective library-specific licenses.
+Please note that these differ from the licenses for MikanOS and the entire mikanos-build repository.
 
-次のファイル群は Newlib 由来です。ライセンスは `x86_64-elf/LICENSE.newlib` を参照してください。
+The following files originate from Newlib. Please refer to `x86_64-elf/LICENSE.newlib` for the license.
 
     x86_64-elf/lib/
         libc.a
         libg.a
         libm.a
     x86_64-elf/include/
-        c++/ を除くすべて
+        All except c++/
 
-次のファイル群は libc++ 由来です。ライセンスは `x86_64-elf/LICENSE.libcxx` を参照してください。
+The following files originate from libc++. Please refer to `x86_64-elf/LICENSE.libcxx` for the license.
 
     x86_64-elf/lib/
         libc++.a
         libc++abi.a
         libc++experimental.a
     x86_64-elf/include/c++/v1/
-        すべて
+        All
 
-次のファイル群は FreeType 由来です。ライセンスは `x86_64-elf/LICENSE.freetype` を参照してください。
+The following files originate from FreeType. Please refer to `x86_64-elf/LICENSE.freetype` for the license.
 
     x86_64-elf/lib/
         libfreetype.a
     x86_64-elf/include/freetype2/
-        すべて
+        All
 
-## MikanOS のソースコードの入手
+## Obtaining the MikanOS Source Code
 
-Git で入手できます。
+You can obtain it via Git.
 
     $ git clone https://github.com/uchan-nos/mikanos.git
 
-最後の `git clone` によって、カレントディレクトリに mikanos ディレクトリが生成され、そこに MikanOS のソースコードがダウンロードされます。
+The final `git clone` command creates a `mikanos` directory in the current directory and downloads the MikanOS source code into it.
 
-## ブートローダーのビルド
+## Building the Bootloader
 
-EDK II のディレクトリに MikanOS ブートローダーのディレクトリをリンクします。
+Link the MikanOS bootloader directory to the EDK II directory.
 
-| :warning: 以下の `/path/to/mikanos` はご自身の環境に適した文字列に置き換えてください。                                    |
-| :------------------------------------------------------------------------------------------------------------------------ |
-| 『ゼロからのOS自作入門』にしたがって実験している場合は `ln -s $HOME/workspace/mikanos/MikanLoaderPkg ./` となるはずです。 |
+| :warning: Please replace the following `/path/to/mikanos` with a string appropriate for your environment.                                                              |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| If you are following the instructions in “Introduction to Building Your Own OS from Scratch,” the command should be `ln -s $HOME/workspace/mikanos/MikanLoaderPkg ./`. |
 
     $ cd $HOME/edk2
     $ ln -s /path/to/mikanos/MikanLoaderPkg ./
 
-`/path/to/mikanos` は先ほど `git clone` でダウンロードした mikanos ディレクトリへのパスを指定します。
-ブートローダーのソースコードが正しく見えればリンク成功です。
+Specify the path to the `mikanos` directory you downloaded earlier with `git clone` for `/path/to/mikanos`.
+If you can see the bootloader source code correctly, the link was successful.
 
     $ ls MikanLoaderPkg/Main.c
 
-次に，`edksetup.sh` を読み込むことで EDK II のビルドに必要な環境変数を設定します。
+Next, run `edksetup.sh` to set the environment variables required for building EDK II.
 
     $ source edksetup.sh
 
-`edksetup.sh` ファイルを読み込むと，環境変数が設定される他に `Conf/target.txt` が自動的に生成されます。
-このファイルをエディタで開き，次の項目を修正します。
+When you run the `edksetup.sh` file, environment variables are set, and `Conf/target.txt` is automatically generated.
+Open this file in an editor and modify the following entries.
 
-| 設定項目        | 設定値                            |
+| Setting         | Value                             |
 | --------------- | --------------------------------- |
 | ACTIVE_PLATFORM | MikanLoaderPkg/MikanLoaderPkg.dsc |
 | TARGET          | DEBUG                             |
 | TARGET_ARCH     | X64                               |
 | TOOL_CHAIN_TAG  | CLANG38                           |
 
-設定が終わったらブートローダーをビルドします。
+Once the configuration is complete, build the bootloader.
 
     $ build
 
-- 「ModuleNotFoundError: No module named 'distutils.util'」というエラーが出る場合は、`sudo apt install python3-distutils` を実行してから再度 `build` を実行すると上手くいく可能性があります。試してみてください。
-- 「Instance of library class [RegisterFilterLib] is not found」というエラーが出てビルドが失敗する場合は [RegisterFilterLib 関係のエラーで MikanLoaderPkg がビルドできません](https://github.com/uchan-nos/os-from-zero/blob/main/faq.md#registerfilterlib-%E9%96%A2%E4%BF%82%E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%A7-mikanloaderpkg-%E3%81%8C%E3%83%93%E3%83%AB%E3%83%89%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%9B%E3%82%93) を参照してください。
+- If you encounter the error “ModuleNotFoundError: No module named ‘distutils.util’”, running `sudo apt install python3-distutils` and then running `build` again may resolve the issue. Please try this.
+- If the build fails with the error “Instance of library class [RegisterFilterLib] is not found,” see [MikanLoaderPkg cannot be built due to [RegisterFilterLib]-related errors](https://github.com/uchan-nos/os-from-zero/blob/main/faq.md#registerfilterlib-%E9%96%A2%E4%BF%82% E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC% E3%81%A7-mikanloaderpkg-%E3%81%8C%E3%83%93%E3%83%AB%E3%83%89%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%9B%E3%82%93).
 
-Loader.efi ファイルが出力されていればビルド成功です。
+If the Loader.efi file is generated, the build was successful.
 
     $ ls Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi
 
-## MikanOS のビルド
+## Building MikanOS
 
-ビルドに必要な環境変数を読み込みます。
+Load the environment variables required for the build.
 
     $ source $HOME/osbook/devenv/buildenv.sh
 
-ビルドします。
+Perform the build.
 
     $ cd /path/to/mikanos
     $ ./build.sh
 
-QEMU で起動するには `./build.sh` に `run` オプションを指定します。
+To run it in QEMU, specify the `run` option with `./build.sh`.
 
     $ ./build.sh run
 
-apps ディレクトリにアプリ群を入れ、フォントなどのリソースをも含めたディスクイメージを作るには APPS_DIR と RESOURCE_DIR 変数を指定します。
+To place apps in the `apps` directory and create a disk image that includes resources such as fonts, specify the `APPS_DIR` and `RESOURCE_DIR` variables.
 
     $ APPS_DIR=apps RESOURCE_DIR=resource ./build.sh run
