@@ -27,10 +27,11 @@ EFI_STATUS SaveMemoryMap(struct MemoryMap *map, EFI_FILE_PROTOCOL *file) {
 
   CHAR8 *header =
       "Index, Type, Type(name), PhysicalStart, NumberOfPages, Attribute\n";
-  len = AsciiStrLen(header)' file->Write(file, &len, header);
+  len = AsciiStrLen(header);
+  file->Write(file, &len, header);
 
-      Print(L"map->buffer = %08lx, map->map_size = %08lx\n", map->buffer,
-            map->map_size);
+  Print(L"map->buffer = %08lx, map->map_size = %08lx\n", map->buffer,
+        map->map_size);
 
   EFI_PHYSICAL_ADDRESS iter;
   int i;
