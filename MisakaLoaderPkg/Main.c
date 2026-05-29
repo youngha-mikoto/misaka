@@ -1,4 +1,10 @@
+#include <Library/PrintLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Protocol/BlockIo.h>
+#include <Protocol/DiskIo2.h>
+#include <Protocol/LoadedImage.h>
+#include <Protocol/SimpleFileSystem.h>
 #include <Uefi.h>
 
 struct MemoryMap {
