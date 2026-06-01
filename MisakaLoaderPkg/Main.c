@@ -150,6 +150,25 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
   Print(L"Kernel: 0x%01x (%lu bytes)\n", kernel_base_addr, kernel_file_size);
   //
 
+  // Exit boot services before calling kernel.
+  EFI_STATUS status;
+  status = gBS->ExitBootServices(image_handle, memmap.map_key);
+  if (EFI_ERROR(status)) {
+    status = GetMemoryMap(&memmap);
+    if (EFI_ERROR(status)) {
+      Print(L"failed to get memory map: %r\n", status);
+      while (1)
+        ;
+    }
+    status = gBS->ExitBootServices(image_handle, memmap.map_key);
+    if (EFI_ERROR(status)) {
+      Print(L"Could not exit boot service: %r\n", status);
+      while (1)
+        ;
+    }
+  }
+  //
+
   while (1)
     ;
   return EFI_SUCCESS;
