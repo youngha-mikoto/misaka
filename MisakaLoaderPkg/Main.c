@@ -116,7 +116,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
                            EFI_SYSTEM_TABLE *system_table) {
   Print(L"Hello, Misaka World!\n");
 
-  CHAR8 memmap_buf[4096 * 4];
+  CHAR8 memmap_buf[4096 * 16];
   struct MemoryMap memmap = {sizeof(memmap_buf), memmap_buf, 0, 0, 0, 0};
   GetMemoryMap(&memmap);
 
