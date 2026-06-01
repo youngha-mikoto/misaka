@@ -197,6 +197,12 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
   entry_point();
   //
 
+  // Deliver frame buffer information to kernel.
+  typedef void EntryPointType(UINT64, UINT64);
+  EntryPointType *entry_point(EntryPointType *) entry_addr;
+  entry_point(gop->Mode->FrameBufferBase, gop->Mode->FrameBufferSize);
+  //
+
   Print(L"All done\n");
 
   while (1)
