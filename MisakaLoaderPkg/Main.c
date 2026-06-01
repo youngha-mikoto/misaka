@@ -131,6 +131,25 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
   SaveMemoryMap(&memmap, memmap_file);
   memmap_file->Close(memmap_file);
 
+  // Get GOP (Grahphics Output Protocol) and render.
+  EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+  OpenGOP(image_handle, &gop);
+  Print(L"Resolution: %ux%u, Picel Format: %s, %u pixels/line\n",
+        gop->Mode->Info->HorizontalResolution,
+        gop->Mode->Info->VerticalResolution,
+        GetPixelFormatUnicode(gop->Mode->Info->PixelFormat),
+        gop->Mode->Info->PixelsPerScanLine);
+  Print(L"Frame Buffer: 0x%0lx - 0x%0lx, Size: %lu bytes\n",
+        gop->Mode->FrameBufferBase,
+        gop->Mode->FrameBufferBase + gop->Mode->FrameBufferSize,
+        gop->Mode->FrameBufferSize);
+
+  UINT8 *frame_buffer = (UINT8 *)gop->Mode->FrameBufferBase;
+  for (UINTN i = 0; i < gop->Mode->FrameBufferSize; ++i) {
+    frame_buffer[i] = 255;
+  }
+  //
+
   // Read kernel file.
   EFI_FILE_PROTOCOL *kernel_file;
   root_dir->Open(root_dir, &kernel_file, L"\\kernel.elf", EFI_FILE_MODE_READ,
