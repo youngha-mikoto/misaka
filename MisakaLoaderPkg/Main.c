@@ -70,6 +70,7 @@ const CHAR16 *GetMemoryTypeUnicode(EFI_MEMORY_TYPE type) {
 }
 
 EFI_STATUS SaveMemoryMap(struct MemoryMap *map, EFI_FILE_PROTOCOL *file) {
+  EFI_STATUS status;
   CHAR8 buf[256];
   UINTN len;
 
@@ -104,6 +105,7 @@ EFI_STATUS SaveMemoryMap(struct MemoryMap *map, EFI_FILE_PROTOCOL *file) {
 }
 
 EFI_STATUS OpenRootDir(EFI_HANDLE image_handle, EFI_FILE_PROTOCOL **root) {
+  EFI_STATUS status;
   EFI_LOADED_IMAGE_PROTOCOL *loaded_image;
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *fs;
 
@@ -128,6 +130,7 @@ EFI_STATUS OpenRootDir(EFI_HANDLE image_handle, EFI_FILE_PROTOCOL **root) {
 
 EFI_STATUS OpenGOP(EFI_HANDLE image_handle,
                    EFI_GRAPHICS_OUTPUT_PROTOCOL **gop) {
+  EFI_STATUS status;
   UINTN num_gop_handles = 0;
   EFI_HANDLE *gop_handles = NULL;
   status = gBS->LocateHandleBuffer(ByProtocol, &gEfiGraphicsOutputProtocolGuid,
@@ -172,6 +175,8 @@ void Halt(void) {
 
 EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
                            EFI_SYSTEM_TABLE *system_table) {
+  EFI_STATUS status;
+
   Print(L"Hello, Misaka World!\n");
 
   CHAR8 memmap_buf[4096 * 16];
@@ -197,7 +202,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
     Print(L"failed to open file '\\memmap': %r\n", status);
     Print(L"Ignored.\n");
   } else {
-    status = SaveMemoryMap(&memmap, mammap_file);
+    status = SaveMemoryMap(&memmap, memmap_file);
     if (EFI_ERROR(status)) {
       Print(L"failed to save memory map: %r\n", status);
       Halt();
@@ -208,9 +213,6 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
       Halt();
     }
   }
-
-  SaveMemoryMap(&memmap, memmap_file);
-  memmap_file->Close(memmap_file);
 
   // Get GOP (Grahphics Output Protocol) and render.
   EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
@@ -274,7 +276,6 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
   //
 
   // Exit boot services before calling kernel.
-  EFI_STATUS status;
   status = gBS->ExitBootServices(image_handle, memmap.map_key);
   if (EFI_ERROR(status)) {
     status = GetMemoryMap(&memmap);
@@ -295,7 +296,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
   UINT64 entry_addr = *(UINT64 *)(kernel_base_addr + 24);
 
   // Pass FrameBufferConfig to kernel.
-  struct FrameBufferConfig config = {(UINT8 *)gop->Mode->FrameBuuferBase,
+  struct FrameBufferConfig config = {(UINT8 *)gop->Mode->FrameBufferBase,
                                      gop->Mode->Info->PixelsPerScanLine,
                                      gop->Mode->Info->HorizontalResolution,
                                      gop->Mode->Info->VerticalResolution, 0};
@@ -311,7 +312,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
     Halt();
   }
 
-  typdef void EntryPointType(const struct FrameBufferConfig *);
+  typedef void EntryPointType(const struct FrameBufferConfig *);
   EntryPointType *entry_point = (EntryPointType *)entry_addr;
   entry_point(&config);
   //
