@@ -39,4 +39,3 @@ $ cd /media/youngha/64\ GB/
 ```
 $ source copy.sh
 ```
-

@@ -29,4 +29,3 @@
 [Components]
   MisakaLoaderPkg/Loader.inf
 #@range_end(components)
-
